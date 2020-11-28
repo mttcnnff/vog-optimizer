@@ -1,1 +1,1 @@
-from vog_optimizer.models.mnist import MnistModel
+from vog_optimizer.models.mnist import BigMnistModel, LittleMnistModel
