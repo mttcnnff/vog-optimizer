@@ -20,11 +20,17 @@ if __name__ == '__main__':
 
     mnist_trainer.fit(mnist_model)
 
-    sorted_vogs = gradient_snapshot_tracker.analyze_gradients()
+    sorted_vogs = sorted(gradient_snapshot_tracker.example_index_to_vog.items(), key=lambda item: item[1])
 
     dataset = MNIST('./', train=True)
-    lowest_5_vogs_images = [dataset[item[0]][0] for item in sorted_vogs[:5]]
-    highest_5_vogs_images = [dataset[item[0]][0] for item in sorted_vogs[-5:]]
+
+    lowest_5_idxs = [item[0] for item in sorted_vogs[:5]]
+    highest_5_idxs = [item[0] for item in sorted_vogs[-5:]]
+    print(f"Lowest 5 vogs: {lowest_5_idxs}")
+    print(f"Highest 5 vogs: {highest_5_idxs}")
+
+    lowest_5_vogs_images = [dataset[idx][0] for idx in lowest_5_idxs]
+    highest_5_vogs_images = [dataset[idx][0] for idx in highest_5_idxs]
     img_grid = build_image_grid([lowest_5_vogs_images, highest_5_vogs_images])
 
     plt.figure(1)

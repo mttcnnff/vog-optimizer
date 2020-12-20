@@ -1,5 +1,5 @@
 import sys
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 
 import pytorch_lightning as pl
 import torch
@@ -49,8 +49,11 @@ class GradientSnapshotCallback(Callback):
 
     def __init__(self, snapshot_interval: int):
         self.snapshot_interval = snapshot_interval
-        self.x_idx_to_grads: Dict[int, List[torch.Tensor]] = {}
-        self.x_idx_to_y: Dict[int, int] = {}
+        self._x_idx_to_grads: Dict[int, List[torch.Tensor]] = {}
+        self._x_idx_to_y: Dict[int, int] = {}
+
+        self._x_idx_to_vog: Optional[Dict[int, torch.Tensor]] = None
+        self._y_to_vogs: Optional[Dict[int, List[torch.Tensor]]] = None
 
     def on_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         if trainer.current_epoch % self.snapshot_interval == 0:
@@ -61,18 +64,18 @@ class GradientSnapshotCallback(Callback):
                 loss = F.nll_loss(logits, y)
                 loss.backward()
                 for global_index, grad, class_label in zip(global_example_indexes.tolist(), x.grad, y):
-                    self.x_idx_to_grads.setdefault(global_index, []).append(grad)
-                    self.x_idx_to_y[global_index] = class_label
+                    self._x_idx_to_grads.setdefault(global_index, []).append(grad)
+                    self._x_idx_to_y[global_index] = class_label
 
-    def analyze_gradients(self) -> List:
+    def _analyze_gradients(self):
         # Analysis of Gradients
         # TODO: Add normalization
         example_index_to_vog: Dict[int, torch.Tensor] = {}
         class_label_to_vogs: Dict[int, List[torch.Tensor]] = {}
 
-        for global_example_index in self.x_idx_to_grads.keys():
-            temp_grad: torch.Tensor = torch.vstack(self.x_idx_to_grads[global_example_index])
-            class_label: int = self.x_idx_to_y[global_example_index]
+        for global_example_index in self._x_idx_to_grads.keys():
+            temp_grad: torch.Tensor = torch.vstack(self._x_idx_to_grads[global_example_index])
+            class_label: int = self._x_idx_to_y[global_example_index]
             # TODO: Ask about this mean calc and why we sum over all snapshots, but only divide for the subset
             # mean_grad = np.sum(np.array(self.vog[global_example_index]), axis=0) / len(temp_grad)
             vog = calculate_vog(temp_grad)
@@ -80,4 +83,19 @@ class GradientSnapshotCallback(Callback):
             example_index_to_vog[global_example_index] = vog
             class_label_to_vogs.setdefault(class_label, []).append(vog)
 
-        return sorted(example_index_to_vog.items(), key=lambda item: item[1])
+
+        return example_index_to_vog, class_label_to_vogs
+
+
+    @property
+    def example_index_to_vog(self) -> Dict[int, torch.Tensor]:
+        if self._x_idx_to_vog is None:
+            self._x_idx_to_vog, self._y_to_vogs = self._analyze_gradients()
+        return self._x_idx_to_vog
+
+    @property
+    def class_label_to_vog(self) -> Dict[int, List[torch.Tensor]]:
+        if self._y_to_vogs is None:
+            self._x_idx_to_vog, self._y_to_vogs = self._analyze_gradients()
+        return self._y_to_vogs
+
