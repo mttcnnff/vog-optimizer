@@ -1,14 +1,8 @@
-def dataset_with_indices(cls):
-    """
-    Modifies the given Dataset class to return a tuple data, target, index
-    instead of just data, target.
+from typing import List
 
-    Found here: https://discuss.pytorch.org/t/how-to-retrieve-the-sample-indices-of-a-mini-batch/7948/19
-    """
-    def __getitem__(self, index):
-        data, target = cls.__getitem__(self, index)
-        return data, target, index
+import numpy as np
 
-    return type(cls.__name__, (cls,), {
-        '__getitem__': __getitem__,
-    })
+
+def build_image_grid(imgs: List[List]) -> np.ndarray:
+    img_rows = [np.hstack([np.array(img) for img in row]) for row in imgs]
+    return np.vstack(img_rows)
