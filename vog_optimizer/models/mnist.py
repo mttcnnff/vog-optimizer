@@ -73,10 +73,10 @@ class MnistModel(pl.LightningModule):
 
     def setup(self, stage=None):
         if stage == 'fit' or stage is None:
-            self.mnist_train, self.mnist_val = random_split(self.generate_train_dataset(), [55000, 5000])
+            self.mnist_train, self.mnist_val = random_split(self.get_train_dataset(), [55000, 5000])
 
         if stage == 'test':
-            self.mnist_test = self.generate_test_dataset()
+            self.mnist_test = self.get_test_dataset()
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(self.mnist_train, batch_size=self.batch_size, num_workers=5)
@@ -87,10 +87,10 @@ class MnistModel(pl.LightningModule):
     def test_dataloader(self) -> DataLoader:
         return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
-    def generate_train_dataset(self):
+    def get_train_dataset(self, with_transforms=True):
         mnist_with_indices = dataset_with_indices(MNIST)
-        return mnist_with_indices(self.data_dir, train=True, transform=self.transform)
+        return mnist_with_indices(self.data_dir, train=True, transform=self.transform if with_transforms else None)
 
-    def generate_test_dataset(self):
+    def get_test_dataset(self, with_transforms=True):
         mnist_with_indices = dataset_with_indices(MNIST)
-        return mnist_with_indices(self.data_dir, train=False, transform=self.transform)
+        return mnist_with_indices(self.data_dir, train=False, transform=self.transform if with_transforms else None)

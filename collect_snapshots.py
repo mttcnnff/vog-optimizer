@@ -6,22 +6,22 @@ from vog_optimizer.models.mnist import MnistModel
 from vog_optimizer.utils import build_image_grid
 from vog_optimizer.vog import GradientSnapshotCallback
 
-if __name__ == '__main__':
-    mnist_model = MnistModel()
-    gradient_snapshot_tracker = GradientSnapshotCallback(2)
 
-    mnist_trainer = pl.Trainer(
+def collect_grad_snapshots(model, snapshot_interval, max_epochs):
+    gradient_snapshot_tracker = GradientSnapshotCallback(snapshot_interval)
+
+    trainer = pl.Trainer(
         gpus=None,
-        max_epochs=10,
+        max_epochs=max_epochs,
         progress_bar_refresh_rate=20,
         callbacks=[gradient_snapshot_tracker]
     )
 
-    mnist_trainer.fit(mnist_model)
+    trainer.fit(model)
 
-    sorted_vogs = sorted(gradient_snapshot_tracker.example_index_to_vog.items(), key=lambda item: item[1])
+    sorted_vogs = sorted(gradient_snapshot_tracker.get_example_index_to_vog().items(), key=lambda item: item[1])
 
-    dataset = MNIST('./', train=True)
+    dataset = model.get_train_dataset(with_transforms=False)
 
     lowest_5_idxs = [item[0] for item in sorted_vogs[:5]]
     highest_5_idxs = [item[0] for item in sorted_vogs[-5:]]
@@ -37,6 +37,5 @@ if __name__ == '__main__':
     plt.show()
 
 
-
-
-
+if __name__ == '__main__':
+    collect_grad_snapshots(MnistModel(), 2, 10)
