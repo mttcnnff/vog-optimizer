@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     mnist_trainer.fit(mnist_model)
 
-    sorted_vogs = sorted(gradient_snapshot_tracker.example_index_to_vog.items(), key=lambda item: item[1])
+    sorted_vogs = sorted(gradient_snapshot_tracker.get_example_index_to_vog().items(), key=lambda item: item[1])
 
     dataset = MNIST('./', train=True)
 

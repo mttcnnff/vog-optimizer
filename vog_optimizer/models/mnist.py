@@ -7,13 +7,17 @@ from torchvision import transforms
 from torchvision.datasets import MNIST
 
 import pytorch_lightning as pl
-from pytorch_lightning.metrics.functional import accuracy
+from torchmetrics.functional import accuracy
 
-from vog_optimizer.vog import dataset_with_indices
+
+class MNIST_with_index(MNIST):
+    def __getitem__(self, index):
+        data, target = super().__getitem__(index)
+        return data, target, index
 
 
 class MnistModel(pl.LightningModule):
-    def __init__(self, data_dir='./', learning_rate=2e-4):
+    def __init__(self, data_dir='./data', learning_rate=2e-4):
         super(MnistModel, self).__init__()
 
         MEAN = 0.1307
@@ -68,8 +72,8 @@ class MnistModel(pl.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
 
     def prepare_data(self) -> None:
-        MNIST(self.data_dir, train=True, download=True)
-        MNIST(self.data_dir, train=False, download=True)
+        MNIST_with_index(self.data_dir, train=True, download=True)
+        MNIST_with_index(self.data_dir, train=False, download=True)
 
     def setup(self, stage=None):
         if stage == 'fit' or stage is None:
@@ -79,18 +83,16 @@ class MnistModel(pl.LightningModule):
             self.mnist_test = self.get_test_dataset()
 
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(self.mnist_train, batch_size=self.batch_size, num_workers=5)
+        return DataLoader(self.mnist_train, batch_size=self.batch_size, num_workers=4)
 
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self.mnist_val, batch_size=self.batch_size)
+        return DataLoader(self.mnist_val, batch_size=self.batch_size, num_workers=1)
 
     def test_dataloader(self) -> DataLoader:
         return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
     def get_train_dataset(self, with_transforms=True):
-        mnist_with_indices = dataset_with_indices(MNIST)
-        return mnist_with_indices(self.data_dir, train=True, transform=self.transform if with_transforms else None)
+        return MNIST_with_index(self.data_dir, train=True, transform=self.transform if with_transforms else None)
 
     def get_test_dataset(self, with_transforms=True):
-        mnist_with_indices = dataset_with_indices(MNIST)
-        return mnist_with_indices(self.data_dir, train=False, transform=self.transform if with_transforms else None)
+        return MNIST_with_index(self.data_dir, train=False, transform=self.transform if with_transforms else None)

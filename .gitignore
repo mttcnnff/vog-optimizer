@@ -1,6 +1,7 @@
 .idea
 
-lightning_logs
-MNIST
+lightning_logs/
+data/
+
 
 *.pyc
